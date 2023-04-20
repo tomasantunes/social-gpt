@@ -31,19 +31,19 @@ app.use(session({
 var con = mysql.createPool({
   connectionLimit : 90,
   connectTimeout: 1000000,
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "social_gpt"
+  host: secretConfig.DB_HOST,
+  user: secretConfig.DB_USER,
+  password: secretConfig.DB_PASSWORD,
+  database: secretConfig.DB_NAME
 });
 
 var con2 = mysql2.createPool({
   connectionLimit : 90,
   connectTimeout: 1000000,
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "social_gpt"
+  host: secretConfig.DB_HOST,
+  user: secretConfig.DB_USER,
+  password: secretConfig.DB_PASSWORD,
+  database: secretConfig.DB_NAME
 });
 
 const configuration = new Configuration({
