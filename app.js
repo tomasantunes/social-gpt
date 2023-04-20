@@ -28,23 +28,55 @@ app.use(session({
   saveUninitialized: true
 }));
 
-var con = mysql.createPool({
-  connectionLimit : 90,
-  connectTimeout: 1000000,
-  host: secretConfig.DB_HOST,
-  user: secretConfig.DB_USER,
-  password: secretConfig.DB_PASSWORD,
-  database: secretConfig.DB_NAME
-});
+var con;
+var con2;
 
-var con2 = mysql2.createPool({
-  connectionLimit : 90,
-  connectTimeout: 1000000,
-  host: secretConfig.DB_HOST,
-  user: secretConfig.DB_USER,
-  password: secretConfig.DB_PASSWORD,
-  database: secretConfig.DB_NAME
-});
+if (secretConfig.ENVIRONMENT == "WINDOWS") {
+  con = mysql.createPool({
+    connectionLimit : 90,
+    connectTimeout: 1000000,
+    host: secretConfig.DB_HOST,
+    user: secretConfig.DB_USER,
+    password: secretConfig.DB_PASSWORD,
+    database: secretConfig.DB_NAME,
+    timezone: '+00:00',
+    port: 3306
+  });
+
+  con2 = mysql2.createPool({
+    connectionLimit : 90,
+    connectTimeout: 1000000,
+    host: secretConfig.DB_HOST,
+    user: secretConfig.DB_USER,
+    password: secretConfig.DB_PASSWORD,
+    database: secretConfig.DB_NAME,
+    timezone: '+00:00',
+    port: 3306
+  });
+}
+else if (secretConfig.ENVIRONMENT == "UBUNTU") {
+  con = mysql.createPool({
+    connectionLimit : 90,
+    connectTimeout: 1000000,
+    host: secretConfig.DB_HOST,
+    user: secretConfig.DB_USER,
+    password: secretConfig.DB_PASSWORD,
+    database: secretConfig.DB_NAME,
+    socketPath: '/var/run/mysqld/mysqld.sock',
+    timezone: '+00:00'
+  });
+
+  con2 = mysql2.createPool({
+    connectionLimit : 90,
+    connectTimeout: 1000000,
+    host: secretConfig.DB_HOST,
+    user: secretConfig.DB_USER,
+    password: secretConfig.DB_PASSWORD,
+    database: secretConfig.DB_NAME,
+    socketPath: '/var/run/mysqld/mysqld.sock',
+    timezone: '+00:00'
+  });
+}
 
 const configuration = new Configuration({
   apiKey: secretConfig.API_KEY,
