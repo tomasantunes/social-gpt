@@ -260,6 +260,11 @@ app.post("/api/check-login", (req, res) => {
   var sql = "SELECT * FROM logins WHERE is_valid = 0 AND created_at > (NOW() - INTERVAL 1 HOUR);";
 
   con.query(sql, function (err, result) {
+    if (err) {
+      console.log(err);
+      res.json({status: "NOK", error: err.message});
+      return;
+    }
     if (result.length <= 5) {
       if (user == secretConfig.USER && pass == secretConfig.PASS) {
         req.session.isLoggedIn = true;
