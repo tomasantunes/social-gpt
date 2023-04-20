@@ -269,13 +269,25 @@ app.post("/api/check-login", (req, res) => {
       if (user == secretConfig.USER && pass == secretConfig.PASS) {
         req.session.isLoggedIn = true;
         var sql2 = "INSERT INTO logins (is_valid) VALUES (1);";
-        con.query(sql2);
-        res.json({status: "OK", data: "Login successful."});
+        con.query(sql2, function(err2, result2) {
+          if (err2) {
+            console.log(err2);
+            res.json({status: "NOK", error: err2.message});
+            return;
+          }
+          res.json({status: "OK", data: "Login successful."});
+        });
       }
       else {
         var sql2 = "INSERT INTO logins (is_valid) VALUES (0);";
-        con.query(sql2);
-        res.json({status: "NOK", error: "Wrong username/password."});
+        con.query(sql2, function(err2, result2) {
+          if (err2) {
+            console.log(err2);
+            res.json({status: "NOK", error: err2.message});
+            return;
+          }
+          res.json({status: "NOK", data: "Wrong username/password."});
+        });
       }
     }
     else {
