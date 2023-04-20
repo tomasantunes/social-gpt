@@ -22,3 +22,13 @@
   background-color: #ccc;
   padding: 10px;
 }
+
+.login-box {
+  padding: 25px;
+  background-color: #ccc;
+  border-radius: 10px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}

@@ -8,6 +8,7 @@ var mysql2 = require('mysql2/promise');
 var secretConfig = require('./secret-config.json');
 var axios = require('axios');
 const { Configuration, OpenAIApi } = require("openai");
+var session = require('express-session');
 
 var app = express();
 
@@ -20,6 +21,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use(session({
+  secret: secretConfig.SESSION_KEY,
+  resave: false,
+  saveUninitialized: true
+}));
 
 var con = mysql.createPool({
   connectionLimit : 90,
@@ -66,7 +73,7 @@ var bots = [
     id: 4,
     author: "Chris",
     dialogue: [
-      {"role": "user", "content": "From now on, you are going to act very negatively. You will pretend you are a very pessimistic and critical person. You will be very negative about everything. You will be very critical about everything. You will be very sarcastic about everything. You will be very cynical about everything. You will be very pessimistic about everything. Every answer you give from now on will have to be in this tone."}
+      {"role": "user", "content": "From now on, you are going to pretend you are pessimistic. You will pretend you are a very pessimistic and critical person. You will point out any flaws and mistakes you read. You will be very critical about everything. You will be very sarcastic about everything. You will be very cynical about everything. You will be very pessimistic about everything. Every answer you give from now on will have to be in this tone."}
     ]
   },
   {
@@ -129,6 +136,10 @@ async function getAnswer(messages) {
 }
 
 app.post("/api/insert-user-post", (req, res) => {
+    if (!req.session.isLoggedIn) {
+      res.json({status: "NOK", error: "Invalid Authorization."});
+      return;
+    }
     var content = req.body.content;
     var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, 'user', 1, 0, 'User')";
     con.query(sql, [content], async function (err, result) {
@@ -169,6 +180,10 @@ function getComments(posts, parent_id) {
 }
 
 app.get('/api/get-user-timeline', (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
   var sql = "SELECT * FROM posts WHERE timeline = 'user'";
   con.query(sql, function (err, result) {
     if (err) {
@@ -191,6 +206,10 @@ app.get('/api/get-user-timeline', (req, res) => {
 });
 
 app.get('/api/get-bots-timeline', async (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
   await generatePosts();
   var sql = "SELECT * FROM posts WHERE timeline = 'bots' ORDER BY id DESC";
   con.query(sql, function (err, result) {
@@ -202,18 +221,65 @@ app.get('/api/get-bots-timeline', async (req, res) => {
   });
 });
 
-app.use(express.static(path.resolve(__dirname) + '/frontend/build'));
+app.post("/api/check-login", (req, res) => {
+  var user = req.body.user;
+  var pass = req.body.pass;
+
+  var sql = "SELECT * FROM logins WHERE is_valid = 0 AND created_at > (NOW() - INTERVAL 1 HOUR);";
+
+  con.query(sql, function (err, result) {
+    if (result.length <= 5) {
+      if (user == secretConfig.USER && pass == secretConfig.PASS) {
+        req.session.isLoggedIn = true;
+        var sql2 = "INSERT INTO logins (is_valid) VALUES (1);";
+        con.query(sql2);
+        res.json({status: "OK", data: "Login successful."});
+      }
+      else {
+        var sql2 = "INSERT INTO logins (is_valid) VALUES (0);";
+        con.query(sql2);
+        res.json({status: "NOK", error: "Wrong username/password."});
+      }
+    }
+    else {
+      res.json({status: "NOK", error: "Too many login attempts."});
+    }
+  });
+  
+  
+});
 
 app.get('/', (req, res) => {
-  res.redirect('/user-timeline');
+  if(req.session.isLoggedIn) {
+    res.redirect('/user-timeline');
+  }
+  else {
+    res.redirect('/login');
+  }
+});
+
+app.use(express.static(path.resolve(__dirname) + '/frontend/build'));
+
+app.get('/login', (req, res) => {
+  res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
 });
 
 app.get('/user-timeline', (req, res) => {
-  res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  if(req.session.isLoggedIn) {
+    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  }
+  else {
+    res.redirect('/login');
+  }
 });
 
 app.get('/bots-timeline', (req, res) => {
-  res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  if(req.session.isLoggedIn) {
+    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  }
+  else {
+    res.redirect('/login');
+  }
 });
 
 // catch 404 and forward to error handler
