@@ -129,7 +129,7 @@ async function initBots() {
     var bot = bots[i];
     if (bot.dialogue.length > 0) {
       var messages = await getAnswer(bot.dialogue);
-      bot.dialogue = messages;
+      bots[i].dialogue = messages;
     }
   }
 }
