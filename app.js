@@ -192,7 +192,7 @@ initBots();
 
 async function getAnswer(messages) {
   const completion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
+    model: "gpt-4",
     messages: messages,
   });
   console.log(completion.data.choices[0].message);
