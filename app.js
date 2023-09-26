@@ -30,6 +30,8 @@ app.use(session({
 
 var con;
 var con2;
+var requests_completed = 0;
+var total_requests = 0;
 
 if (secretConfig.ENVIRONMENT == "WINDOWS") {
   con = mysql.createPool({
@@ -214,25 +216,36 @@ app.post("/api/insert-user-post", (req, res) => {
         res.json({status: "NOK", error: err.message});
       }
 
+      requests_completed = 0;
+      total_requests = bots.length;
+
       for (var i in bots) {
         currentDialogue = bots[i].dialogue;
-        currentDialogue.push({"role": "user", "content": content})
-        var messages = await getAnswer(currentDialogue)
-        console.log(messages);
-        var comment = {
-          author: bots[i].author,
-          user_id: bots[i].id,
-          parent_id: result.insertId,
-          timeline: "user"
-        }
-        comment.content = messages[messages.length - 1].content;
+        currentDialogue.push({"role": "user", "content": content});
+        getBotAnswer(currentDialogue, bots[i], result.insertId);
+      }
 
-        var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, ?, ?, ?, ?)";
-        await con2.query(sql, [comment.content, comment.timeline, comment.user_id, comment.parent_id, comment.author]);
+      while (requests_completed < total_requests) {
+        await new Promise(r => setTimeout(r, 500));
       }
       res.json({status: "OK", data: "Post has been submitted successfully."});
     });
 });
+
+async function getBotAnswer(dialogue, bot, insertId) {
+  var messages = await getAnswer(dialogue)
+  var comment = {
+    author: bot.author,
+    user_id: bot.id,
+    parent_id: insertId,
+    timeline: "user"
+  }
+  comment.content = messages[messages.length - 1].content;
+
+  var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, ?, ?, ?, ?)";
+  await con2.query(sql, [comment.content, comment.timeline, comment.user_id, comment.parent_id, comment.author]);
+  requests_completed++;
+}
 
 function getComments(posts, parent_id) {
   var comments = [];
