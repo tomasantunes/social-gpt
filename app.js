@@ -274,7 +274,7 @@ async function getDialogues(cb) {
   });
 }
 
-async function getAllDialogues() {
+async function getAllDialogues(cb) {
   var sql = "SELECT * FROM dialogues";
   con.query(sql, function (err, result) {
     if (err) {
