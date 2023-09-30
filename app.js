@@ -274,6 +274,41 @@ async function getDialogues(cb) {
   });
 }
 
+async function getAllDialogues() {
+  var sql = "SELECT * FROM dialogues";
+  con.query(sql, function (err, result) {
+    if (err) {
+      console.log(err);
+      cb({status: "NOK", error: err.message});
+    }
+    var dialogues = [];
+    for (var i in result) {
+      var existing_dialogue_idx = dialogues.findIndex(dialogue => dialogue.id == result[i].bot_id);
+      if (existing_dialogue_idx != -1) {
+        dialogues[existing_dialogue_idx].dialogue.push(
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+        );
+      }
+      else {
+        dialogues.push({
+          id: result[i].bot_id,
+          author: result[i].author,
+          dialogue: [
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+          ]
+        });
+      }
+    }
+    cb({status: "OK", data: dialogues});
+  });
+}
+
 app.post("/api/insert-user-post", (req, res) => {
     if (!req.session.isLoggedIn) {
       res.json({status: "NOK", error: "Invalid Authorization."});
@@ -379,7 +414,7 @@ app.get('/api/get-bots', (req, res) => {
     res.json({status: "NOK", error: "Invalid Authorization."});
     return;
   }
-  getDialogues(function(response) {
+  getAllDialogues(function(response) {
     if (response.status == "OK") {
       res.json({status: "OK", data: response.data});
     }
