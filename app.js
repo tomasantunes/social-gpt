@@ -193,14 +193,23 @@ async function generatePosts() {
 initBots();
 
 async function getAnswer(messages) {
-  const completion = await openai.createChatCompletion({
-    model: "gpt-4",
-    messages: messages,
-  });
-  console.log(completion.data.choices[0].message);
-  var message = completion.data.choices[0].message;
-  messages.push(message);
-  return messages;
+  try {
+    const completion = await openai.createChatCompletion({
+      model: "gpt-4",
+      messages: messages,
+    })
+    console.log(completion.data.choices[0].message);
+    var message = completion.data.choices[0].message;
+    messages.push(message);
+    return messages;
+  } catch(err) {
+    if (err.status == 429) {
+      console.log("Too many requests.");
+      await new Promise(r => setTimeout(r, 60000));
+      return getAnswer(messages);
+    }
+    console.log(err.message);
+  }
 }
 
 app.post("/api/insert-user-post", (req, res) => {
