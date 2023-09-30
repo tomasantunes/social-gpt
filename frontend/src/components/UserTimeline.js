@@ -14,6 +14,7 @@ export default function UserTimeline() {
   const [posts, setPosts] = useState([]);
   const [replyText, setReplyText] = useState('');
   const [replyParentId, setReplyParentId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   function loadPosts() {
     axios.get(config.BASE_URL + '/api/get-user-timeline')
@@ -66,17 +67,25 @@ export default function UserTimeline() {
 
   function submitReply(e) {
     e.preventDefault();
+    setLoading(true);
     axios.post(config.BASE_URL + '/api/insert-reply', {content: replyText, parent_id: replyParentId})
     .then(function(response) {
       if (response.data.status == "OK") {
+        setLoading(false);
         alert("Reply has been submitted successfully.");
         closeReplyBox();
         loadPosts();
       }
       else {
+        setLoading(false);
         alert(response.data.error);
       }
     })
+    .catch(function(err) {
+      setLoading(false);
+      console.log(err);
+      alert("Error submitting reply: " + err.message);
+    });
   }
 
   useEffect(() => {
@@ -125,6 +134,13 @@ export default function UserTimeline() {
                 </div>
                 <div className="form-group">
                     <div style={{textAlign: "right"}}>
+                        {loading && (
+                          <div style={{textAlign: 'center'}}>
+                            <div class="spinner-border" role="status">
+                              <span class="visually-hidden">Loading...</span>
+                            </div>
+                          </div>
+                        )}
                         <button type="submit" className="btn btn-primary">Submit</button>
                     </div>
                 </div>
