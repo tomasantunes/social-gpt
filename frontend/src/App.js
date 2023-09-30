@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import UserTimeline from './components/UserTimeline';
 import BotsTimeline from './components/BotsTimeline';
+import CreateBot from './components/CreateBot';
 import Login from './components/Login';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/user-timeline" element={<UserTimeline />} />
         <Route path="/bots-timeline" element={<BotsTimeline />} />
+        <Route path="/create-bot" element={<CreateBot />} />
       </Routes>
     </BrowserRouter>
   );

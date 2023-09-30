@@ -17,6 +17,9 @@ export default function Navbar() {
               <li class="nav-item">
                 <NavLink to="/bots-timeline" className="nav-link">Bots Timeline</NavLink>
               </li>
+              <li class="nav-item">
+                <NavLink to="/create-bot" className="nav-link">Create Bot</NavLink>
+              </li>
             </ul>
           </div>
       </div>

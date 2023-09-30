@@ -32,3 +32,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
 }
+
+.bot {
+  background-color: #ccc;
+  padding: 25px;
+}

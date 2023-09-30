@@ -33,7 +33,7 @@ var con2;
 var requests_completed = 0;
 var total_requests = 0;
 
-if (secretConfig.ENVIRONMENT == "WINDOWS") {
+if (secretConfig.ENVIRONMENT == "WINDOWS" || secretConfig.ENVIRONMENT == "MACOS") {
   con = mysql.createPool({
     connectionLimit : 90,
     connectTimeout: 1000000,
@@ -88,6 +88,7 @@ const openai = new OpenAIApi(configuration);
 
 var currentDialogue = [];
 
+/*
 var bots = [
   {
     id: 2,
@@ -160,7 +161,10 @@ var bots = [
     ]
   },
 ];
+*/
 
+
+/*
 async function initBots() {
   for (var i in bots) {
     var bot = bots[i];
@@ -170,27 +174,30 @@ async function initBots() {
     }
   }
 }
+*/
 
-async function generatePosts() {
-  for (var i in bots) {
-    var bot = bots[i];
-    currentDialogue = bot.dialogue;
-    currentDialogue.push({role: "user", content: "Please write a random post for social media."});
-    var messages = await getAnswer(currentDialogue);
-    console.log()
-    var post = {
-      user_id: bot.id,
-      parent_id: 0,
-      timeline: "bots",
-      content: messages[messages.length - 1].content,
-      author: bot.author
+async function generatePosts(cb) {
+  getDialogues(async function(response) {
+    var bots = response.data;
+    for (var i in bots) {
+      var bot = bots[i];
+      currentDialogue = bot.dialogue;
+      currentDialogue.push({role: "user", content: "Please write a random post for social media."});
+      var messages = await getAnswer(currentDialogue);
+      console.log()
+      var post = {
+        user_id: bot.id,
+        parent_id: 0,
+        timeline: "bots",
+        content: messages[messages.length - 1].content,
+        author: bot.author
+      }
+      var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, ?, ?, ?, ?)";
+      await con2.query(sql, [post.content, post.timeline, post.user_id, post.parent_id, post.author]);
+      cb();
     }
-    var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, ?, ?, ?, ?)";
-    await con2.query(sql, [post.content, post.timeline, post.user_id, post.parent_id, post.author]);
-  }
+  });
 }
-
-initBots();
 
 async function getAnswer(messages) {
   try {
@@ -212,6 +219,41 @@ async function getAnswer(messages) {
   }
 }
 
+async function getDialogues(cb) {
+  var sql = "SELECT * FROM dialogues";
+  con.query(sql, function (err, result) {
+    if (err) {
+      console.log(err);
+      cb({status: "NOK", error: err.message});
+    }
+    var dialogues = [];
+    for (var i in result) {
+      var existing_dialogue_idx = dialogues.findIndex(dialogue => dialogue.id == result[i].bot_id);
+      if (existing_dialogue_idx != -1) {
+        dialogues[existing_dialogue_idx].dialogue.push(
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+        );
+      }
+      else {
+        dialogues.push({
+          id: result[i].bot_id,
+          author: result[i].author,
+          dialogue: [
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+          ]
+        });
+      }
+    }
+    cb({status: "OK", data: dialogues});
+  });
+}
+
 app.post("/api/insert-user-post", (req, res) => {
     if (!req.session.isLoggedIn) {
       res.json({status: "NOK", error: "Invalid Authorization."});
@@ -225,20 +267,90 @@ app.post("/api/insert-user-post", (req, res) => {
         res.json({status: "NOK", error: err.message});
       }
 
-      requests_completed = 0;
-      total_requests = bots.length;
+      getDialogues(async function(response) {
+        if (response.status == "OK") {
+          var bots = response.data;
+          requests_completed = 0;
+          total_requests = bots.length;
 
-      for (var i in bots) {
-        currentDialogue = bots[i].dialogue;
-        currentDialogue.push({"role": "user", "content": content});
-        getBotAnswer(currentDialogue, bots[i], result.insertId);
-      }
+          for (var i in bots) {
+            currentDialogue = bots[i].dialogue;
+            currentDialogue.push({"role": "user", "content": content});
+            getBotAnswer(currentDialogue, bots[i], result.insertId);
+          }
 
-      while (requests_completed < total_requests) {
-        await new Promise(r => setTimeout(r, 500));
-      }
-      res.json({status: "OK", data: "Post has been submitted successfully."});
+          while (requests_completed < total_requests) {
+            await new Promise(r => setTimeout(r, 500));
+          }
+          res.json({status: "OK", data: "Post has been submitted successfully."});
+        }
+        else {
+          res.json({status: "NOK", error: response.error});
+        }
+      })
     });
+});
+
+app.post("/api/create-bot", (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
+
+  var author = req.body.author;
+  var prompt = req.body.prompt;
+
+  var sql1 = "SELECT MAX(bot_id) AS max_bot_id FROM dialogues";
+  con.query(sql1, function (err, result) {
+    if (err) {
+      console.log(err);
+      res.json({status: "NOK", error: err.message});
+      return;
+    }
+    var max_bot_id = result[0].max_bot_id;
+    if (max_bot_id == null) {
+      max_bot_id = 2;
+    }
+    var bot_id = max_bot_id + 1;
+    var sql2 = "INSERT INTO dialogues (bot_id, author, content, role) VALUES (?, ?, ?, ?)";
+    con.query(sql2, [bot_id, author, prompt, "user"], async function (err, result) {
+      if (err) {
+        console.log(err);
+        res.json({status: "NOK", error: err.message});
+        return;
+      }
+
+      var messages = [
+        {"role": "user", "content": prompt}
+      ];
+
+      var messages2 = await getAnswer(messages);
+      var sql3 = "INSERT INTO dialogues (bot_id, author, content, role) VALUES (?, ?, ?, ?)";
+      con.query(sql3, [bot_id, author, messages2[messages2.length - 1].content, messages2[messages2.length - 1].role], async function (err, result) {
+        if (err) {
+          console.log(err);
+          res.json({status: "NOK", error: err.message});
+          return;
+        }
+        res.json({status: "OK", data: "Bot has been created successfully."});
+      });
+    });
+  });
+});
+
+app.get('/api/get-bots', (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
+  getDialogues(function(response) {
+    if (response.status == "OK") {
+      res.json({status: "OK", data: response.data});
+    }
+    else {
+      res.json({status: "NOK", error: response.error});
+    }
+  });
 });
 
 async function getBotAnswer(dialogue, bot, insertId) {
@@ -298,14 +410,15 @@ app.get('/api/get-bots-timeline', async (req, res) => {
     res.json({status: "NOK", error: "Invalid Authorization."});
     return;
   }
-  await generatePosts();
-  var sql = "SELECT * FROM posts WHERE timeline = 'bots' ORDER BY id DESC";
-  con.query(sql, function (err, result) {
-    if (err) {
-      console.log(err);
-      res.json({status: "NOK", error: err.message});
-    }
-    res.json({status: "OK", data: result});
+  generatePosts(function() {
+    var sql = "SELECT * FROM posts WHERE timeline = 'bots' ORDER BY id DESC";
+    con.query(sql, function (err, result) {
+      if (err) {
+        console.log(err);
+        res.json({status: "NOK", error: err.message});
+      }
+      res.json({status: "OK", data: result});
+    });
   });
 });
 
@@ -380,6 +493,15 @@ app.get('/user-timeline', (req, res) => {
 });
 
 app.get('/bots-timeline', (req, res) => {
+  if(req.session.isLoggedIn) {
+    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  }
+  else {
+    res.redirect('/login');
+  }
+});
+
+app.get('/create-bot', (req, res) => {
   if(req.session.isLoggedIn) {
     res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
   }
