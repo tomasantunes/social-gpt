@@ -9,6 +9,7 @@ var secretConfig = require('./secret-config.json');
 var axios = require('axios');
 const { Configuration, OpenAIApi } = require("openai");
 var session = require('express-session');
+const { get } = require('http');
 
 var app = express();
 
@@ -176,6 +177,19 @@ async function initBots() {
 }
 */
 
+function shuffle(array) {
+  let currentIndex = array.length,  randomIndex;
+
+  while (currentIndex > 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
+}
+
 async function generatePosts(cb) {
   getDialogues(async function(response) {
     var bots = response.data;
@@ -194,8 +208,8 @@ async function generatePosts(cb) {
       }
       var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, ?, ?, ?, ?)";
       await con2.query(sql, [post.content, post.timeline, post.user_id, post.parent_id, post.author]);
-      cb();
     }
+    cb();
   });
 }
 
@@ -250,7 +264,13 @@ async function getDialogues(cb) {
         });
       }
     }
-    cb({status: "OK", data: dialogues});
+    if (dialogues.length < 6) {
+      cb({status: "OK", data: dialogues});
+    }
+    else {
+      cb({status: "OK", data: shuffle(dialogues).slice(0, 5)});
+    }
+    
   });
 }
 
@@ -309,7 +329,7 @@ app.post("/api/create-bot", (req, res) => {
     }
     var max_bot_id = result[0].max_bot_id;
     if (max_bot_id == null) {
-      max_bot_id = 2;
+      max_bot_id = 1;
     }
     var bot_id = max_bot_id + 1;
     var sql2 = "INSERT INTO dialogues (bot_id, author, content, role) VALUES (?, ?, ?, ?)";
@@ -337,6 +357,22 @@ app.post("/api/create-bot", (req, res) => {
     });
   });
 });
+
+async function getParentPost(parent_id) {
+  var sql = "SELECT * FROM posts WHERE id = ?";
+  var [rows, fields] = await con2.query(sql, [parent_id]);
+  return rows[0];
+}
+
+async function getAllParentPosts(parent_id) {
+  var posts = [];
+  var parent_post = await getParentPost(parent_id);
+  posts.push(parent_post);
+  if (parent_post.parent_id != 0) {
+    posts = posts.concat(await getAllParentPosts(parent_post.parent_id));
+  }
+  return posts;
+}
 
 app.get('/api/get-bots', (req, res) => {
   if (!req.session.isLoggedIn) {
@@ -368,23 +404,29 @@ async function getBotAnswer(dialogue, bot, insertId) {
   requests_completed++;
 }
 
-function getComments(posts, parent_id) {
+// recursive function to get all comments of a post and include the comments of those comments
+function getComments(posts, post_id) {
   var comments = [];
   for (var i in posts) {
     var post = posts[i];
-    if (post.parent_id == parent_id) {
+    if (post.parent_id == post_id) {
+      post.comments = getComments(posts, post.id);
       comments.push(post);
     }
   }
+  comments.sort(function(a, b) {
+    return b.id - a.id;
+  });
   return comments;
 }
+
 
 app.get('/api/get-user-timeline', (req, res) => {
   if (!req.session.isLoggedIn) {
     res.json({status: "NOK", error: "Invalid Authorization."});
     return;
   }
-  var sql = "SELECT * FROM posts WHERE timeline = 'user'";
+  var sql = "SELECT p1.*, p2.author AS parent_author FROM posts p1 LEFT JOIN posts p2 ON p1.parent_id = p2.id WHERE p1.timeline = 'user' ";
   con.query(sql, function (err, result) {
     if (err) {
       console.log(err);
@@ -402,6 +444,47 @@ app.get('/api/get-user-timeline', (req, res) => {
       return b.id - a.id;
     });
     res.json({status: "OK", data: posts});
+  });
+});
+
+app.post("/api/insert-reply", (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
+  var content = req.body.content;
+  var parent_id = req.body.parent_id;
+  var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, 'user', 1, ?, 'User')";
+  con.query(sql, [content, parent_id], async function (err, result) {
+    if (err) {
+      console.log(err);
+      res.json({status: "NOK", error: err.message});
+    }
+    var parent_post1 = await getParentPost(parent_id);
+    var parent_posts = await getAllParentPosts(parent_id);
+    parent_posts.reverse();
+    getDialogues(async function(response) {
+      var bot = response.data.find(bot => bot.id == parent_post1.user_id);
+      if (bot) {
+        var dialogue = bot.dialogue;
+        for (var i in parent_posts) {
+          if (parent_posts[i].user_id != 1) {
+            dialogue.push({"role": "assistant", "content": parent_posts[i].content});
+          }
+          else {
+            dialogue.push({"role": "user", "content": parent_posts[i].content});
+          }
+          dialogue.push({"role": "user", "content": content});
+          
+        }
+        await getBotAnswer(dialogue, bot, result.insertId);
+        res.json({status: "OK", data: "Reply has been submitted successfully."});
+      }
+      else {
+        res.json({status: "OK", data: "Reply has been submitted successfully."});
+      }
+    });
+    
   });
 });
 

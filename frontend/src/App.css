@@ -15,12 +15,14 @@
   margin-left: 75px;
   background-color: #ccc;
   padding: 10px;
+  white-space: pre-line;
 }
 
 .post-content {
   margin: 5px;
   background-color: #ccc;
   padding: 10px;
+  white-space: pre-line;
 }
 
 .login-box {

@@ -3,9 +3,17 @@ import Navbar from './Navbar';
 import SubmitPostForm from './SubmitPostForm';
 import axios from 'axios';
 import config from '../config.json';
+import $ from 'jquery';
+
+window.jQuery = $;
+window.$ = $;
+global.jQuery = $;
+window.bootstrap = require('bootstrap');
 
 export default function UserTimeline() {
   const [posts, setPosts] = useState([]);
+  const [replyText, setReplyText] = useState('');
+  const [replyParentId, setReplyParentId] = useState(null);
 
   function loadPosts() {
     axios.get(config.BASE_URL + '/api/get-user-timeline')
@@ -23,6 +31,54 @@ export default function UserTimeline() {
     });
   }
 
+  function getComments(post) {
+    if (post.comments.length > 0) {
+      return post.comments.map((comment, index) => (
+        <div key={comment.id}>
+          <div className="post-comment" >
+            <p><i>Replying to {comment.parent_author}</i></p>
+            <p><b>{comment.author}</b></p>
+            <small>{post.created_at}</small><br/>
+            {comment.content}
+            <div style={{textAlign: 'right'}}>
+              <button className="btn btn-primary btn-sm" onClick={(e) => { openReplyBox(comment.id) }}>Reply</button>
+            </div>
+          </div>
+          {getComments(comment)}
+        </div>
+      ));
+    }
+    else {
+      return '';
+    }
+  }
+
+  function openReplyBox(parentId) {
+    setReplyParentId(parentId);
+    $('.replyModal').modal('show');
+  }
+
+  function closeReplyBox() {
+    setReplyParentId(null);
+    setReplyText('');
+    $('.replyModal').modal('hide');
+  }
+
+  function submitReply(e) {
+    e.preventDefault();
+    axios.post(config.BASE_URL + '/api/insert-reply', {content: replyText, parent_id: replyParentId})
+    .then(function(response) {
+      if (response.data.status == "OK") {
+        alert("Reply has been submitted successfully.");
+        closeReplyBox();
+        loadPosts();
+      }
+      else {
+        alert(response.data.error);
+      }
+    })
+  }
+
   useEffect(() => {
     loadPosts();
   }, []);
@@ -38,20 +94,43 @@ export default function UserTimeline() {
               <div className="post" key={post.id}>
                 <div className="post-content">
                   <p><b>{post.author}</b></p>
+                  <small>{post.created_at}</small><br/>
                   {post.content}
+                  <div style={{textAlign: 'right'}}>
+                    <button className="btn btn-primary btn-sm" onClick={(e) => { openReplyBox(post.id) }}>Reply</button>
+                  </div>
                 </div>
                 <div className="post-comments">
-                  {post.comments.map((comment, index) => (
-                    <div className="post-comment" key={comment.id}>
-                      <p><b>{comment.author}</b></p>
-                      {comment.content}
-                    </div>
-                  ))}
+                  {getComments(post)}
                 </div>
               </div>
               <hr />
             </>
           ))}
+        </div>
+      </div>
+      <div class="modal replyModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Reply</h5>
+              <button type="button" class="btn-close" onClick={closeReplyBox} aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <form onSubmit={submitReply}>
+                <div className="form-group py-2">
+                  <div>
+                    <textarea className="form-control" value={replyText} onChange={e => setReplyText(e.target.value)} />
+                  </div>
+                </div>
+                <div className="form-group">
+                    <div style={{textAlign: "right"}}>
+                        <button type="submit" className="btn btn-primary">Submit</button>
+                    </div>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </>
