@@ -1,5 +1,4 @@
 # TODO
 
 - Add favicon
-- Add option to reply to answers.
-- Show dates on posts.
+- Replace alerts with sweetalert2.
