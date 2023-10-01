@@ -9,7 +9,6 @@ var secretConfig = require('./secret-config.json');
 var axios = require('axios');
 const { Configuration, OpenAIApi } = require("openai");
 var session = require('express-session');
-const { get } = require('http');
 
 var app = express();
 
@@ -233,7 +232,7 @@ async function getAnswer(messages) {
   }
 }
 
-async function getDialogues(cb) {
+async function getRandomDialogues(cb) {
   var sql = "SELECT * FROM dialogues";
   con.query(sql, function (err, result) {
     if (err) {
@@ -271,6 +270,54 @@ async function getDialogues(cb) {
       cb({status: "OK", data: shuffle(dialogues).slice(0, 5)});
     }
     
+  });
+}
+
+function getDialogues(selectedBots, cb) {
+  var bot_ids = [];
+  if (selectedBots.length > 0) {
+    for (var i in selectedBots) {
+      bot_ids.push(selectedBots[i].value);
+    }
+    getDialoguesByIds(bot_ids, cb);
+  }
+  else {
+    getRandomDialogues(cb);
+  }
+}
+
+async function getDialoguesByIds(ids, cb) {
+  var sql = "SELECT * FROM dialogues WHERE bot_id IN (?)";
+  con.query(sql, [ids], function (err, result) {
+    if (err) {
+      console.log(err);
+      cb({status: "NOK", error: err.message});
+    }
+    var dialogues = [];
+    for (var i in result) {
+      var existing_dialogue_idx = dialogues.findIndex(dialogue => dialogue.id == result[i].bot_id);
+      if (existing_dialogue_idx != -1) {
+        dialogues[existing_dialogue_idx].dialogue.push(
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+        );
+      }
+      else {
+        dialogues.push({
+          id: result[i].bot_id,
+          author: result[i].author,
+          dialogue: [
+            {
+              role: result[i].role,
+              content: result[i].content
+            }
+          ]
+        });
+      }
+    }
+    cb({status: "OK", data: dialogues});
   });
 }
 
@@ -315,6 +362,8 @@ app.post("/api/insert-user-post", (req, res) => {
       return;
     }
     var content = req.body.content;
+    var selectedBots = req.body.selectedBots;
+
     var sql = "INSERT INTO posts (content, timeline, user_id, parent_id, author) VALUES (?, 'user', 1, 0, 'User')";
     con.query(sql, [content], async function (err, result) {
       if (err) {
@@ -322,7 +371,7 @@ app.post("/api/insert-user-post", (req, res) => {
         res.json({status: "NOK", error: err.message});
       }
 
-      getDialogues(async function(response) {
+      getDialogues(selectedBots, async function(response) {
         if (response.status == "OK") {
           var bots = response.data;
           requests_completed = 0;
