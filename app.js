@@ -190,7 +190,7 @@ function shuffle(array) {
 }
 
 async function generatePosts(cb) {
-  getDialogues(async function(response) {
+  getDialogues([], async function(response) {
     var bots = response.data;
     for (var i in bots) {
       var bot = bots[i];
