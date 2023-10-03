@@ -458,6 +458,26 @@ async function getAllParentPosts(parent_id) {
   return posts;
 }
 
+app.get("/api/get-bots-list", (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
+  getAllDialogues(function(response) {
+    if (response.status == "OK") {
+      var bot_names = [];
+      for (var i in response.data) {
+        bot_names.push(response.data[i].author);
+      }
+      bot_names = bot_names.join("\n");
+      res.json({status: "OK", data: bot_names});
+    }
+    else {
+      res.json({status: "NOK", error: response.error});
+    }
+  });
+});
+
 app.get('/api/get-bots', (req, res) => {
   if (!req.session.isLoggedIn) {
     res.json({status: "NOK", error: "Invalid Authorization."});
