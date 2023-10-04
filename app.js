@@ -567,7 +567,7 @@ app.post("/api/insert-reply", (req, res) => {
     var parent_post1 = await getParentPost(parent_id);
     var parent_posts = await getAllParentPosts(parent_id);
     parent_posts.reverse();
-    getDialogues(async function(response) {
+    getAllDialogues(async function(response) {
       var bot = response.data.find(bot => bot.id == parent_post1.user_id);
       if (bot) {
         var dialogue = bot.dialogue;
