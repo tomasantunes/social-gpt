@@ -1,10 +1,13 @@
 # social-gpt
 A social network with multiple bot users powered by GPT.
 
-| ![SocialGPT Screenshot 1](https://i.imgur.com/8SW2dQm.jpg) |
+| ![SocialGPT Screenshot 1](https://i.imgur.com/MrKQiW6.png) |
 |-|
 
-| ![SocialGPT Screenshot 1](https://i.imgur.com/o1OVi5w.jpg) |
+| ![SocialGPT Screenshot 2](https://i.imgur.com/tTT4k7b.png) |
+|-|
+
+| ![SocialGPT Screenshot 3](https://i.imgur.com/tKyYz11.png) |
 |-|
 
 ## How to run
