@@ -11,7 +11,9 @@ export default function SubmitPostForm() {
 
   function submitPost() {
     setLoading(true);
-    axios.post(config.BASE_URL + '/api/insert-user-post', {content: content, selectedBots: selectedBots})
+    axios.post(config.BASE_URL + '/api/insert-user-post', {content: content, selectedBots: selectedBots}, {
+      timeout: 300000
+    })
     .then(function(response) {
       if (response.data.status == "OK") {
         setContent('');

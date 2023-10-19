@@ -263,11 +263,11 @@ async function getRandomDialogues(cb) {
         });
       }
     }
-    if (dialogues.length < 6) {
+    if (dialogues.length <= 6) {
       cb({status: "OK", data: dialogues});
     }
     else {
-      cb({status: "OK", data: shuffle(dialogues).slice(0, 5)});
+      cb({status: "OK", data: shuffle(dialogues).slice(0, 6)});
     }
     
   });
