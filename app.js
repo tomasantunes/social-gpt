@@ -226,7 +226,7 @@ async function getAnswer(messages) {
     if (err.status == 429) {
       console.log("Too many requests.");
       await new Promise(r => setTimeout(r, 60000));
-      return getAnswer(messages);
+      return await getAnswer(messages);
     }
     console.log(err.message);
   }
