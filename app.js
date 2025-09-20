@@ -213,7 +213,7 @@ async function generatePosts(cb) {
 async function getAnswer(messages) {
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: messages,
     })
     console.log(completion.data.choices[0].message);
