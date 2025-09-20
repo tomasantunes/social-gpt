@@ -7,7 +7,7 @@ var mysql = require('mysql2');
 var mysql2 = require('mysql2/promise');
 var secretConfig = require('./secret-config.json');
 var axios = require('axios');
-const { Configuration, OpenAIApi } = require("openai");
+var OpenAI = require("openai");
 var session = require('express-session');
 
 var app = express();
@@ -80,11 +80,9 @@ else if (secretConfig.ENVIRONMENT == "UBUNTU") {
   });
 }
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: secretConfig.API_KEY,
 });
-
-const openai = new OpenAIApi(configuration);
 
 var currentDialogue = [];
 
@@ -664,15 +662,15 @@ app.get('/', (req, res) => {
   }
 });
 
-app.use(express.static(path.resolve(__dirname) + '/frontend/build'));
+app.use(express.static(path.resolve(__dirname) + '/frontend/dist'));
 
 app.get('/login', (req, res) => {
-  res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+  res.sendFile(path.resolve(__dirname) + '/frontend/dist/index.html');
 });
 
 app.get('/user-timeline', (req, res) => {
   if(req.session.isLoggedIn) {
-    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+    res.sendFile(path.resolve(__dirname) + '/frontend/dist/index.html');
   }
   else {
     res.redirect('/login');
@@ -681,7 +679,7 @@ app.get('/user-timeline', (req, res) => {
 
 app.get('/bots-timeline', (req, res) => {
   if(req.session.isLoggedIn) {
-    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+    res.sendFile(path.resolve(__dirname) + '/frontend/dist/index.html');
   }
   else {
     res.redirect('/login');
@@ -690,7 +688,7 @@ app.get('/bots-timeline', (req, res) => {
 
 app.get('/create-bot', (req, res) => {
   if(req.session.isLoggedIn) {
-    res.sendFile(path.resolve(__dirname) + '/frontend/build/index.html');
+    res.sendFile(path.resolve(__dirname) + '/frontend/dist/index.html');
   }
   else {
     res.redirect('/login');
