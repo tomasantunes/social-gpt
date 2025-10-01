@@ -1,4 +1,4 @@
-var {getMySQLConenctions} = require('./database');
+var {getMySQLConnections} = require('./database');
 var {getAnswer} = require("./openai");
 var {getDialogues} = require("./dialogues");
 
@@ -14,7 +14,7 @@ async function generatePosts(cb) {
       currentDialogue = bot.dialogue;
       currentDialogue.push({role: "user", content: "Please write a random post for social media."});
       var messages = await getAnswer(currentDialogue);
-      console.log()
+      console.log(JSON.stringify(messages));
       var post = {
         user_id: bot.id,
         parent_id: 0,

@@ -2,7 +2,8 @@ var express = require('express');
 var router = express.Router();
 var {getMySQLConnections} = require("../libs/database");
 var {getAllDialogues, getDialogues, getBotAsnswer} = require("../libs/dialogues");
-var {getParentPost, getAllParentPosts, getComments} = require("../libs/posts");
+var {getParentPost, getAllParentPosts} = require("../libs/posts");
+var {getComments} = require('../libs/comments');
 
 var {con, con2} = getMySQLConnections();
 

@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var {getMySQLConnections} = require("../libs/database");
-var {generatePosts} = require("../libs/posts");
+var {generatePosts} = require("../libs/timeline");
 
 var {con, con2} = getMySQLConnections();
 

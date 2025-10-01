@@ -12,12 +12,12 @@ function getOpenAI() {
 
 async function getAnswer(messages) {
   try {
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
     })
-    console.log(completion.data.choices[0].message);
-    var message = completion.data.choices[0].message;
+    console.log(completion.choices[0].message);
+    var message = completion.choices[0].message;
     messages.push(message);
     return messages;
   } catch(err) {
