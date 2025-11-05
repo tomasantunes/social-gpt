@@ -58,8 +58,8 @@ export default function UserTimeline() {
         return `
           <p><i>Replying to ${comment.parent_author}</i></p>
           <p><b>${comment.author}</b></p>
-          <small>${post.created_at}</small><br/>
-          ${comment.content}
+          <p><small>${post.created_at}</small></p>
+          <div>${marked.parse(comment.content)}</div>
           <hr>
         `;
       });
