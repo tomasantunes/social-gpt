@@ -48,6 +48,23 @@ export default function UserTimeline() {
     }
   }
 
+  function getCommentsToExport(post) {
+    if (post.comments.length > 0) {
+      return post.comments.map((comment, index) => {
+        return `
+          <p><i>Replying to ${comment.parent_author}</i></p>
+          <p><b>${comment.author}</b></p>
+          <small>${post.created_at}</small><br/>
+          ${comment.content}
+          <hr>
+        `;
+      });
+    }
+    else {
+      return '';
+    }
+  }
+
   function openReplyBox(parentId) {
     setReplyParentId(parentId);
     var modal = bootstrap.Modal.getOrCreateInstance(document.querySelector('.replyModal'))
@@ -84,6 +101,42 @@ export default function UserTimeline() {
     });
   }
 
+  function exportToBlog(post) {
+    var title = "AI Talk - #" + post.id;
+    var content = "";
+    var tags = ""
+    var summary = "AI Talk - #" + post.id;
+
+    content += `
+      <p><b>${post.author}</b></p>
+      <small>${post.created_at}</small><br/>
+      ${post.content}
+      <hr>
+    `;
+
+    var comments = getCommentsToExport(post);
+    content += comments;
+
+
+    axios.post(config.BASE_URL + "/blog/add-post", {
+      title,
+      content,
+      tags, 
+      summary
+    })
+    .then(function(response) {
+      if (response.data.status == "OK") {
+        alert("Post has been exported successfully.")
+      }
+      else {
+        alert("There was an error exporting the post.");
+      }
+    })
+    .catch(function(err) {
+      alert("Connection error.");
+    })
+  }
+
   useEffect(() => {
     loadPosts();
   }, []);
@@ -102,6 +155,7 @@ export default function UserTimeline() {
                   <small>{post.created_at}</small><br/>
                   {post.content}
                   <div style={{textAlign: 'right'}}>
+                    <button className="btn btn-primary btn-sm me-2" onClick={() => exportToBlog(post)}>Export To Blog</button>
                     <button className="btn btn-primary btn-sm" onClick={(e) => { openReplyBox(post.id) }}>Reply</button>
                   </div>
                 </div>

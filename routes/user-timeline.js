@@ -4,6 +4,8 @@ var {getMySQLConnections} = require("../libs/database");
 var {getAllDialogues, getDialogues, getBotAsnswer} = require("../libs/dialogues");
 var {getParentPost, getAllParentPosts} = require("../libs/posts");
 var {getComments} = require('../libs/comments');
+var secretConfig = require('../secret-config.json');
+var axios = require('axios');
 
 var {con, con2} = getMySQLConnections();
 
@@ -114,6 +116,34 @@ router.post("/api/insert-user-post", (req, res) => {
         }
       })
     });
+});
+
+router.post("/blog/add-post", (req, res) => {
+  if (!req.session.isLoggedIn) {
+    res.json({status: "NOK", error: "Invalid Authorization."});
+    return;
+  }
+
+  var title = req.body.title;
+  var summary = req.body.summary;
+  var content = req.body.content;
+  var tags = req.body.tags;
+  var api_key = secretConfig.BLOG_API_KEY;
+
+  axios.post(secretConfig.BLOG_URL + '/external/add-post', {
+    api_key,
+    title,
+    summary,
+    content,
+    tags
+  })
+  .then(function(response) {
+    res.json({status: "OK", data: "Post has been exported successfully."});
+  })
+  .catch(function(err) {
+    console.log(err);
+    res.json({status: "NOK", error: "Error exporting post: " + err.message});
+  });
 });
 
 module.exports = router;
