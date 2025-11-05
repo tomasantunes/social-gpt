@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import SubmitPostForm from './SubmitPostForm';
 import axios from 'axios';
 import config from '../config.json';
+import { marked } from 'marked';
 
 export default function UserTimeline() {
   const [posts, setPosts] = useState([]);
@@ -34,7 +35,10 @@ export default function UserTimeline() {
             <p><i>Replying to {comment.parent_author}</i></p>
             <p><b>{comment.author}</b></p>
             <small>{post.created_at}</small><br/>
-            {comment.content}
+            <div
+              className="bot-answer"
+              dangerouslySetInnerHTML={{ __html: marked.parse(comment.content) }}
+            />
             <div style={{textAlign: 'right'}}>
               <button className="btn btn-primary btn-sm" onClick={(e) => { openReplyBox(comment.id) }}>Reply</button>
             </div>
@@ -104,7 +108,7 @@ export default function UserTimeline() {
   function exportToBlog(post) {
     var title = "AI Talk - #" + post.id;
     var content = "";
-    var tags = ""
+    var tags = "AI";
     var summary = "AI Talk - #" + post.id;
 
     content += `

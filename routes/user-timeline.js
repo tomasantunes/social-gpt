@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var {getMySQLConnections} = require("../libs/database");
-var {getAllDialogues, getDialogues, getBotAsnswer} = require("../libs/dialogues");
+var {getAllDialogues, getDialogues, getBotAnswer} = require("../libs/dialogues");
 var {getParentPost, getAllParentPosts} = require("../libs/posts");
 var {getComments} = require('../libs/comments');
 var secretConfig = require('../secret-config.json');
